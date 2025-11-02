@@ -6,7 +6,7 @@ function Home() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (isAuthenticated()) navigate("/app");
+    if (isAuthenticated()) navigate("/dashboard");
   }, []);
 
   return (

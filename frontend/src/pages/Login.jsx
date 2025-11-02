@@ -21,7 +21,7 @@ function Login() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error al iniciar sesión");
       setToken(data.token);
-      navigate("/app");
+      navigate("/dashboard");
     } catch (err) {
       setError(err.message);
     }
