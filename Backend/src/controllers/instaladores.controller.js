@@ -99,41 +99,50 @@ const downloadInstalador = async (req, res) => {
     const { rol } = req.user;
 
     // Validar permisos
-    if (rol !== 'admin' && rol !== 'usuario') {
-      return res.status(403).json({ error: 'No tienes permiso para descargar instaladores' });
+    if (rol !== "admin" && rol !== "usuario") {
+      return res.status(403).json({ error: "No tienes permiso para descargar instaladores" });
     }
 
     // Buscar instalador
     const instalador = await Instalador.findByPk(id, {
       include: [
-        { model: Aplicativo, as: 'aplicativo', attributes: ['nombre'] },
-        { model: Usuario, as: 'usuario', attributes: ['nombre'] }
-      ]
+        { model: Aplicativo, as: "aplicativo", attributes: ["nombre"] },
+        { model: Usuario, as: "usuario", attributes: ["nombre"] },
+      ],
     });
 
     if (!instalador) {
-      return res.status(404).json({ error: 'Instalador no encontrado' });
+      return res.status(404).json({ error: "Instalador no encontrado" });
     }
 
     // Construir la ruta física
-    const filePath = path.join(__dirname, '../../', instalador.archivo_url);
+    const filePath = path.join(__dirname, "../../", instalador.archivo_url);
 
     if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: 'Archivo no encontrado en el servidor' });
+      return res.status(404).json({ error: "Archivo no encontrado en el servidor" });
     }
 
-    // Descargar archivo
-    res.download(filePath, path.basename(filePath), (err) => {
+    // Nombre original del archivo en el disco
+    const originalName = path.basename(filePath);
+
+    // Enviar cabecera con nombre original
+    res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(originalName)}"`);
+    res.setHeader("Content-Type", "application/octet-stream");
+
+    // Enviar archivo directamente
+    res.sendFile(filePath, (err) => {
       if (err) {
-        console.error('Error al descargar el archivo:', err);
-        res.status(500).json({ error: 'Error al descargar el archivo' });
+        console.error("Error al enviar el archivo:", err);
+        res.status(500).json({ error: "Error al descargar el archivo" });
       }
     });
   } catch (error) {
-    console.error('Error en descarga:', error);
-    res.status(500).json({ error: 'Error al procesar la descarga' });
+    console.error("Error en descarga:", error);
+    res.status(500).json({ error: "Error al procesar la descarga" });
   }
 };
+
+
 
 const deleteInstalador = async (req, res) => {
   try {

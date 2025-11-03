@@ -7,6 +7,7 @@ function Consulta() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // 🔹 Cargar aplicativos con token
   useEffect(() => {
     const fetchAplicativos = async () => {
       try {
@@ -28,29 +29,74 @@ function Consulta() {
     fetchAplicativos();
   }, []);
 
-  const handleDescargar = async (archivoUrl) => {
-    try {
-      window.open(`${import.meta.env.VITE_API_URL}/${archivoUrl}`, "_blank");
-    } catch (err) {
-      console.error("Error al descargar:", err);
+const handleDownload = async (instaladorId) => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Debe iniciar sesión para descargar instaladores.");
+      return;
     }
-  };
 
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/instaladores/${instaladorId}/download`,
+      {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Error al descargar el instalador");
+    }
+
+    // Leer el archivo como Blob
+    const blob = await response.blob();
+
+    // Obtener nombre del archivo desde Content-Disposition
+    const disposition = response.headers.get("content-disposition");
+    let fileName = "instalador.exe";
+
+    if (disposition) {
+      const match = disposition.match(/filename\*?=(?:UTF-8'')?["']?([^;"']+)["']?/);
+      if (match && match[1]) {
+        fileName = decodeURIComponent(match[1]);
+      }
+    }
+
+    // Crear enlace de descarga con el nombre correcto
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+
+    // Limpiar después
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Error al descargar instalador:", error);
+    alert(error.message);
+  }
+};
+
+  // 🔹 Filtrado
   const filtrados = aplicativos.filter((a) =>
     a.nombre.toLowerCase().includes(busqueda.toLowerCase())
   );
 
   if (loading)
     return (
-      <div className="flex justify-center items-center h-screen bg-gradient-to-br from-sky-400 to-teal-500 text-white text-lg">
+      <div className="flex justify-center items-center h-screen bg-gradient-to-br from-sky-500 to-teal-600 text-white text-lg font-semibold">
         Cargando aplicativos...
       </div>
     );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-400 to-teal-500 text-gray-800 flex flex-col items-center p-6">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-8">
-        <h1 className="text-3xl font-bold text-center text-sky-600 mb-6">
+    <div className="min-h-screen bg-gradient-to-br from-sky-400 to-teal-500 flex flex-col items-center p-6 text-gray-800">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl p-8">
+        <h1 className="text-3xl font-bold text-center text-sky-700 mb-6">
           Consulta de Aplicativos
         </h1>
 
@@ -70,14 +116,17 @@ function Consulta() {
           filtrados.map((app) => (
             <div
               key={app.id}
-              className="border border-gray-200 rounded-lg p-4 mb-4 shadow-md bg-gray-50"
+              className="border border-gray-200 rounded-lg p-4 mb-4 shadow-md bg-gray-50 hover:shadow-lg transition"
             >
-              <h2 className="text-xl font-semibold text-sky-700">
+              <h2 className="text-xl font-semibold text-sky-700 mb-1">
                 {app.nombre}
               </h2>
-              <p className="text-gray-600">{app.descripcion}</p>
+              <p className="text-gray-600 mb-1">{app.descripcion}</p>
               <p className="text-sm text-gray-500 mb-2">
-                Versión actual: <strong>{app.version_actual || "N/A"}</strong>
+                Versión actual:{" "}
+                <strong className="text-gray-700">
+                  {app.version_actual || "N/A"}
+                </strong>
               </p>
 
               {app.instaladores?.length > 0 && (
@@ -93,8 +142,8 @@ function Consulta() {
                       >
                         <span>{inst.version}</span>
                         <button
-                          onClick={() => handleDescargar(inst.archivo_url)}
-                          className="bg-sky-500 text-white px-3 py-1 rounded-lg hover:bg-sky-600 transition"
+                          onClick={() => handleDownload(inst.id)}
+                          className="bg-sky-600 text-white px-3 py-1 rounded-lg hover:bg-sky-700 transition"
                         >
                           Descargar
                         </button>
