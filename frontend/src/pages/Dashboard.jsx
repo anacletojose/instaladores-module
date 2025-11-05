@@ -89,6 +89,13 @@ const Dashboard = () => {
           </button>
 
           <button
+            onClick={() => navigate("/gestion-instaladores")}
+            className="w-full bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 rounded-lg transition"
+          >
+            Gestión de Instaladores
+          </button>
+
+          <button
             onClick={handleLogout}
             className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2 rounded-lg shadow-md hover:shadow-lg transition mt-4"
           >

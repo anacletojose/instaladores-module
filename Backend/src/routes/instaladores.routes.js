@@ -94,7 +94,7 @@ router.get('/', controller.getInstaladores);
  *       404:
  *         description: Aplicativo no encontrado
  */
-router.post('/upload', auth, upload.single('file'), controller.uploadInstalador);
+router.post('/upload', auth, upload.single('archivo'), controller.uploadInstalador);
 
 /**
  * @swagger
