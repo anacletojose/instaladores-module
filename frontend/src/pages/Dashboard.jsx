@@ -51,6 +51,16 @@ const Dashboard = () => {
     navigate("/gestion");
   };
 
+  // 🔹 NUEVA función con la misma protección para Gestión de Instaladores
+  const handleGestionInstaladores = () => {
+    if (user.rol !== "admin") {
+      setErrorMsg("❌ No tienes permisos para acceder a la gestión de instaladores.");
+      setTimeout(() => setErrorMsg(""), 3500);
+      return;
+    }
+    navigate("/gestion-instaladores");
+  };
+
   const handleConsulta = () => navigate("/consulta");
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -85,14 +95,15 @@ const Dashboard = () => {
             onClick={handleGestion}
             className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 rounded-lg shadow-md hover:shadow-lg transition"
           >
-            Ir a Gestión
+            Ir a Gestión de Aplicativos
           </button>
 
+          {/* 🔹 Ahora este botón también tiene validación de rol */}
           <button
-            onClick={() => navigate("/gestion-instaladores")}
+            onClick={handleGestionInstaladores}
             className="w-full bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 rounded-lg transition"
           >
-            Gestión de Instaladores
+            Ir a Gestión de Instaladores
           </button>
 
           <button

@@ -5,7 +5,16 @@ function Consulta() {
   const [aplicativos, setAplicativos] = useState([]);
   const [busqueda, setBusqueda] = useState("");
   const [loading, setLoading] = useState(true);
+  const [mensaje, setMensaje] = useState(""); // 🆕 mensaje temporal
+  const [tipoMensaje, setTipoMensaje] = useState("success"); // 🆕 tipo de mensaje
   const navigate = useNavigate();
+
+  // 🔹 Mostrar mensaje temporal (reutilizable) 🆕
+  const mostrarMensaje = (texto, tipo = "success") => {
+    setMensaje(texto);
+    setTipoMensaje(tipo);
+    setTimeout(() => setMensaje(""), 3000);
+  };
 
   // 🔹 Cargar aplicativos con token
   useEffect(() => {
@@ -29,57 +38,59 @@ function Consulta() {
     fetchAplicativos();
   }, []);
 
-const handleDownload = async (instaladorId) => {
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("Debe iniciar sesión para descargar instaladores.");
-      return;
-    }
-
-    const response = await fetch(
-      `${import.meta.env.VITE_API_URL}/instaladores/${instaladorId}/download`,
-      {
-        method: "GET",
-        headers: { Authorization: `Bearer ${token}` },
+  const handleDownload = async (instaladorId) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        mostrarMensaje("Debe iniciar sesión para descargar instaladores.", "error"); // 🆕
+        return;
       }
-    );
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Error al descargar el instalador");
-    }
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/instaladores/${instaladorId}/download`,
+        {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
-    // Leer el archivo como Blob
-    const blob = await response.blob();
-
-    // Obtener nombre del archivo desde Content-Disposition
-    const disposition = response.headers.get("content-disposition");
-    let fileName = "instalador.exe";
-
-    if (disposition) {
-      const match = disposition.match(/filename\*?=(?:UTF-8'')?["']?([^;"']+)["']?/);
-      if (match && match[1]) {
-        fileName = decodeURIComponent(match[1]);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Error al descargar el instalador");
       }
+
+      // Leer el archivo como Blob
+      const blob = await response.blob();
+
+      // Obtener nombre del archivo desde Content-Disposition
+      const disposition = response.headers.get("content-disposition");
+      let fileName = "instalador.exe";
+
+      if (disposition) {
+        const match = disposition.match(/filename\*?=(?:UTF-8'')?["']?([^;"']+)["']?/);
+        if (match && match[1]) {
+          fileName = decodeURIComponent(match[1]);
+        }
+      }
+
+      // Crear enlace de descarga con el nombre correcto
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+
+      // Limpiar después
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      mostrarMensaje("Descarga iniciada correctamente.", "success"); // 🆕
+    } catch (error) {
+      console.error("Error al descargar instalador:", error);
+      mostrarMensaje(error.message || "Error al descargar el instalador.", "error"); // 🆕
     }
-
-    // Crear enlace de descarga con el nombre correcto
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-
-    // Limpiar después
-    a.remove();
-    window.URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error("Error al descargar instalador:", error);
-    alert(error.message);
-  }
-};
+  };
 
   // 🔹 Filtrado
   const filtrados = aplicativos.filter((a) =>
@@ -95,7 +106,29 @@ const handleDownload = async (instaladorId) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-400 to-teal-500 flex flex-col items-center p-6 text-gray-800">
+      {/* 🆕 Toast de notificación */}
+      {mensaje && (
+        <div
+          className={`fixed top-5 right-5 px-4 py-2 rounded-lg shadow-lg text-white font-medium transition-all z-50 ${
+            tipoMensaje === "error" ? "bg-red-500" : "bg-green-500"
+          }`}
+        >
+          {mensaje}
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl p-8">
+
+        {/* 🔹 Botón superior igual que en Gestión de Instaladores */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg font-semibold transition"
+          >
+            Volver al Dashboard
+          </button>
+        </div>
+
         <h1 className="text-3xl font-bold text-center text-sky-700 mb-6">
           Consulta de Aplicativos
         </h1>
@@ -122,6 +155,11 @@ const handleDownload = async (instaladorId) => {
                 {app.nombre}
               </h2>
               <p className="text-gray-600 mb-1">{app.descripcion}</p>
+              {app.observaciones && (
+                <p className="text-sm text-gray-500 mb-2">
+                  Observaciones: {app.observaciones}
+                </p>
+              )}
               <p className="text-sm text-gray-500 mb-2">
                 Versión actual:{" "}
                 <strong className="text-gray-700">
@@ -140,7 +178,18 @@ const handleDownload = async (instaladorId) => {
                         key={inst.id}
                         className="flex justify-between items-center bg-white border border-gray-200 rounded-md p-2"
                       >
-                        <span>{inst.version}</span>
+                        <div className="flex flex-col text-left">
+                          <span className="font-semibold text-gray-700">
+                            Versión: {inst.version}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            Estado: {inst.estado || "N/A"}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            Observaciones: {inst.observaciones || "N/A"}
+                          </span>
+                        </div>
+
                         <button
                           onClick={() => handleDownload(inst.id)}
                           className="bg-sky-600 text-white px-3 py-1 rounded-lg hover:bg-sky-700 transition"
@@ -155,13 +204,6 @@ const handleDownload = async (instaladorId) => {
             </div>
           ))
         )}
-
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="mt-6 w-full bg-sky-600 text-white py-2 rounded-lg font-semibold hover:bg-sky-700 transition"
-        >
-          Volver al Dashboard
-        </button>
       </div>
     </div>
   );

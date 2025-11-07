@@ -7,7 +7,8 @@ function Gestion() {
   const [editando, setEditando] = useState(null);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [mensaje, setMensaje] = useState({ texto: "", tipo: "" });
-  const [confirmarEliminacion, setConfirmarEliminacion] = useState(null); // ✅ Control del modal de confirmación
+  const [confirmarEliminacion, setConfirmarEliminacion] = useState(null);
+  const [busqueda, setBusqueda] = useState(""); // 🔹 Nuevo estado para búsqueda
   const navigate = useNavigate();
 
   // 🔹 Mostrar notificación temporal
@@ -55,13 +56,12 @@ function Gestion() {
 
       const nuevo = await res.json();
       const resLista = await fetch(`${import.meta.env.VITE_API_URL}/aplicativos`, {
-            headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       const dataActualizada = await resLista.json();
       setAplicativos(dataActualizada);
       setForm({ nombre: "", descripcion: "", observaciones: "" });
       mostrarMensaje("Aplicativo creado correctamente", "success");
-
     } catch (error) {
       console.error(error);
       mostrarMensaje("Error al crear el aplicativo", "error");
@@ -103,50 +103,44 @@ function Gestion() {
   };
 
   // 🔹 Actualizar aplicativo
-const handleActualizar = async (e) => {
-  e.preventDefault();
-  try {
-    const token = localStorage.getItem("token");
+  const handleActualizar = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/aplicativos/${editando}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(form),
+        }
+      );
 
-    // 🔹 Enviar actualización al backend
-    const res = await fetch(
-      `${import.meta.env.VITE_API_URL}/aplicativos/${editando}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(form),
-      }
-    );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al actualizar el aplicativo");
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Error al actualizar el aplicativo");
+      const actualizado = data.aplicativo || data;
+      setAplicativos((prev) =>
+        prev.map((a) => (a.id === actualizado.id ? actualizado : a))
+      );
 
-    // 🔹 Obtener el objeto actualizado (según cómo responda el backend)
-    const actualizado = data.aplicativo || data;
+      setMostrarModal(false);
+      setEditando(null);
+      setForm({ nombre: "", descripcion: "", observaciones: "" });
+      mostrarMensaje("Aplicativo modificado correctamente", "success");
+    } catch (error) {
+      console.error("Error al actualizar el aplicativo:", error);
+      mostrarMensaje(error.message || "Error al actualizar el aplicativo", "error");
+    }
+  };
 
-    // 🔹 Actualizar el estado local sin recargar toda la lista
-    setAplicativos((prev) =>
-      prev.map((a) => (a.id === actualizado.id ? actualizado : a))
-    );
-
-    // 🔹 Cerrar modal y limpiar el formulario
-    setMostrarModal(false);
-    setEditando(null);
-    setForm({ nombre: "", descripcion: "", observaciones: "" });
-
-    // 🔹 Mostrar mensaje de éxito
-    mostrarMensaje("Aplicativo modificado correctamente", "success");
-  } catch (error) {
-    console.error("Error al actualizar el aplicativo:", error);
-    mostrarMensaje(
-      error.message || "Error al actualizar el aplicativo",
-      "error"
-    );
-  }
-};
+  // 🔍 Filtrar aplicativos según búsqueda
+  const aplicativosFiltrados = aplicativos.filter((a) =>
+    a.nombre.toLowerCase().includes(busqueda.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-400 to-teal-500 text-gray-800 flex flex-col items-center p-6">
@@ -162,9 +156,29 @@ const handleActualizar = async (e) => {
       )}
 
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl p-8">
+
+        {/* 🔹 Botón superior igual a otras pantallas */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg font-semibold transition"
+          >
+            Volver al Dashboard
+          </button>
+        </div>
+
         <h1 className="text-3xl font-bold text-center text-sky-600 mb-6">
           Gestión de Aplicativos
         </h1>
+
+        {/* 🔹 Barra de búsqueda */}
+        <input
+          type="text"
+          placeholder="Buscar aplicativo por nombre..."
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          className="w-full p-2 mb-6 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
+        />
 
         {/* 🔹 Formulario de creación */}
         <form
@@ -201,8 +215,8 @@ const handleActualizar = async (e) => {
           </button>
         </form>
 
-        {/* 🔹 Lista de aplicativos */}
-        {aplicativos.map((app) => (
+        {/* 🔹 Lista filtrada de aplicativos */}
+        {aplicativosFiltrados.map((app) => (
           <div
             key={app.id}
             className="border border-gray-200 rounded-lg p-4 mb-4 shadow-md bg-gray-50"
@@ -212,6 +226,7 @@ const handleActualizar = async (e) => {
             <p className="text-sm text-gray-500 mb-2">
               Observaciones: <strong>{app.observaciones || "N/A"}</strong>
             </p>
+            <p className="text-gray-600">Version: {app.version_actual || "N/A"}</p>
 
             <div className="flex justify-end gap-2 mt-3">
               <button
@@ -229,13 +244,6 @@ const handleActualizar = async (e) => {
             </div>
           </div>
         ))}
-
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="mt-6 w-full bg-sky-600 text-white py-2 rounded-lg font-semibold hover:bg-sky-700 transition"
-        >
-          Volver al Dashboard
-        </button>
       </div>
 
       {/* 🔹 Modal de confirmación de eliminación */}

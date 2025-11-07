@@ -16,7 +16,7 @@ exports.getAll = async (req, res) => {
               attributes: ['id', 'nombre', 'email']
             }
           ],
-          attributes: ['id', 'version', 'estado', 'archivo_url', 'createdAt'],
+          attributes: ['id', 'version', 'estado', 'archivo_url', 'observaciones', 'createdAt'],
         },
       ],
       order: [['createdAt', 'DESC']],

@@ -1,4 +1,3 @@
-// src/middleware/authorize.js
 module.exports = function (rolesPermitidos = []) {
   return (req, res, next) => {
     const usuario = req.user;

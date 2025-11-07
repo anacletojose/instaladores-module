@@ -94,7 +94,7 @@ router.get('/', controller.getInstaladores);
  *       404:
  *         description: Aplicativo no encontrado
  */
-router.post('/upload', auth, upload.single('archivo'), controller.uploadInstalador);
+router.post('/upload', auth, authorize(['admin']), upload.single('archivo'), controller.uploadInstalador);
 
 /**
  * @swagger
@@ -161,8 +161,57 @@ router.get(
 router.delete(
   '/:id',
   auth,
-  authorize(['admin', 'usuario']),
+  authorize(['admin']),
   controller.deleteInstalador
 );
+
+/**
+ * @swagger
+ * /api/instaladores/{id}:
+ *   put:
+ *     summary: Actualizar los datos de un instalador
+ *     tags: [Instaladores]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         description: ID del instalador a modificar
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               version:
+ *                 type: string
+ *                 example: "2.3.1"
+ *               estado:
+ *                 type: string
+ *                 example: "activo"
+ *               observaciones:
+ *                 type: string
+ *                 example: "Compatibilidad con Windows 11"
+ *     responses:
+ *       200:
+ *         description: Instalador actualizado correctamente
+ *       403:
+ *         description: Permisos insuficientes
+ *       404:
+ *         description: Instalador no encontrado
+ *       500:
+ *         description: Error al actualizar el instalador
+ */
+router.put(
+  '/:id',
+  auth,
+  authorize(['admin']),
+  controller.updateInstalador
+);
+
 
 module.exports = router;

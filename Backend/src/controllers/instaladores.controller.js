@@ -173,9 +173,53 @@ const deleteInstalador = async (req, res) => {
   }
 };
 
+const updateInstalador = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { version, estado, observaciones } = req.body;
+
+    // Verificar que el usuario tenga permisos
+    const { rol } = req.user;
+    if (rol !== 'admin') {
+      return res.status(403).json({ error: 'Solo los administradores pueden modificar instaladores' });
+    }
+
+    // Buscar el instalador existente
+    const instalador = await Instalador.findByPk(id, {
+      include: [{ model: Aplicativo, as: 'aplicativo' }]
+    });
+
+    if (!instalador) {
+      return res.status(404).json({ error: 'Instalador no encontrado' });
+    }
+
+    // Actualizar campos si fueron enviados
+    if (version) instalador.version = version;
+    if (estado) instalador.estado = estado;
+    if (observaciones) instalador.observaciones = observaciones;
+
+    await instalador.save();
+
+    // 🔹 Si cambió la versión, actualizar el aplicativo asociado
+    if (version && instalador.aplicativo) {
+      await instalador.aplicativo.update({ version_actual: version });
+    }
+
+    res.status(200).json({
+      message: 'Instalador actualizado correctamente',
+      instalador,
+    });
+  } catch (error) {
+    console.error('Error al actualizar el instalador:', error);
+    res.status(500).json({ error: 'Error al actualizar el instalador' });
+  }
+};
+
+
 module.exports = {
   getInstaladores,
   uploadInstalador,
   downloadInstalador,
-  deleteInstalador
+  deleteInstalador,
+  updateInstalador
 };
